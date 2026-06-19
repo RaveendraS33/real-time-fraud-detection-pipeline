@@ -57,4 +57,6 @@ why human review and threshold tuning are necessary.
 ```
 
 The JSON artifact contains the scaler parameters and logistic coefficients, allowing the online
-service to score without shipping scikit-learn in its container.
+service to score without shipping scikit-learn in its container. CI retrains on Linux and checks
+the contract, metrics, and coefficients with a small tolerance for platform-level floating-point
+differences.
