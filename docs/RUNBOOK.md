@@ -64,6 +64,31 @@ docker exec fraud-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-serv
 docker exec fraud-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group fraud-alerter-v1
 ```
 
+## Alerts
+
+Prometheus loads alert rules from `monitoring/alerts.yml`; view them at
+<http://localhost:9090/alerts>:
+
+- `ServiceDown` — a scrape target has been down for 1m.
+- `DetectorFailures` / `DecisionStoreFailures` — validation or delivery failures within 5m.
+- `AlertWebhookFailing` — fraud-alert webhook delivery is failing.
+- `PipelineStalled` — the detector scored nothing for 10m while the API kept ingesting (a stall /
+  consumer-lag proxy; per-partition Kafka lag would need a dedicated exporter).
+
+Rules fire within Prometheus (visible at `/alerts`); wiring an Alertmanager receiver is the next
+step for real paging.
+
+## Performance
+
+Measure latency and throughput against the running stack:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\benchmark.py --count 300 --concurrency 20
+```
+
+Observed locally: ~300 transactions/s accepted (API p50 ~50 ms, p99 ~59 ms), detector scoring
+~2.4 ms average / ~4.8 ms p95, and ~98 transactions/s end-to-end through Kafka to PostgreSQL.
+
 ## Common Failures
 
 ### API returns 503

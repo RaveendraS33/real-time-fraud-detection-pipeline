@@ -1,0 +1,47 @@
+groups:
+  - name: fraud-pipeline
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape target {{ $labels.job }} is down"
+
+      - alert: DetectorFailures
+        expr: increase(fraud_detector_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Detector failures in the last 5m (stage {{ $labels.stage }})"
+
+      - alert: DecisionStoreFailures
+        expr: increase(fraud_store_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Decision-store failures in the last 5m"
+
+      - alert: AlertWebhookFailing
+        expr: increase(fraud_alert_failures_total{stage="webhook"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fraud-alert webhook delivery is failing"
+
+      # Proxy for consumer-lag / stall: the detector scored nothing for 10 minutes
+      # while the API kept accepting transactions. (Per-partition Kafka lag would
+      # need a dedicated kafka-lag exporter, which is intentionally out of scope.)
+      - alert: PipelineStalled
+        expr: |
+          sum(increase(fraud_detector_transactions_total[10m])) == 0
+          and sum(increase(fraud_api_transactions_total[10m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No transactions scored in 10m while the API is still ingesting"

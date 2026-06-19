@@ -24,6 +24,29 @@ controls matter as much as producing a prediction.
   model-artifact verification, and the integration job.
 - **$0 and local-first:** the entire system runs on free, open-source software with no cloud spend.
 
+## Goals and Success Criteria
+
+The system targets card-not-present transaction fraud and is tuned as a **high-recall alerting**
+tool: catch as much fraud as possible for human review while keeping the false-positive rate
+visible and tunable through the score thresholds.
+
+Measured on the synthetic holdout and the local stack (reproduce with the scripts below):
+
+| Dimension | Measured |
+| --- | --- |
+| Model ranking quality | ROC AUC **0.99**, average precision **0.89** |
+| Recall at the 0.5 threshold | **1.00** (0 false negatives on the holdout) |
+| Precision at the 0.5 threshold | **0.67** (false positives are expected and reviewed) |
+| Probability calibration | Brier score **0.033** (see the model card) |
+| Ingestion throughput | ~**300 transactions/s** accepted |
+| API latency | p50 **~50 ms**, p99 **~59 ms** |
+| Detector scoring latency | **~2.4 ms** avg, **~4.8 ms** p95 (Prometheus) |
+| End-to-end throughput (API -> Kafka -> detector -> PostgreSQL) | ~**98 transactions/s** |
+
+These are demonstration numbers on synthetic data and a single-node Docker stack, not production
+guarantees. Reproduce the model numbers with `scripts/evaluate_model.py` and the latency/throughput
+numbers with `scripts/benchmark.py`.
+
 ## Architecture
 
 ```mermaid
@@ -53,20 +76,48 @@ the approve/decline mix, transaction volume over time, and an investigation queu
 
 ![Fraud operations dashboard showing transaction metrics, the decision mix, transaction volume over time, and an investigation queue of declined transactions](docs/screenshots/dashboard.png)
 
-## Planned Detection Signals
+## Detection Signals
 
-- Unusually high transaction amount
-- Rapid transaction velocity within event-time windows
-- New device or country for a customer
-- Geographic travel inconsistent with elapsed time
-- Merchant and transaction risk features
-- Machine-learning probability combined with explainable rules
+**Implemented** (deterministic rules in `src/fraud_detection/rules.py`, combined with the model
+probability in `src/fraud_detection/scoring.py`):
+
+- High transaction amount (`high_amount`, +60)
+- High transaction velocity in the 5-minute event-time window (`high_velocity`, +35)
+- New device for the customer (`new_device`, +20)
+- New country for the customer (`new_country`, +25)
+- Risky merchant on a non-trivial amount (`risky_merchant_amount`, +20)
+- A logistic-regression fraud probability over the five engineered features (model `logreg-v1`)
+
+The final risk score is `max(rule_score, round(model_probability * 100))`, mapped to
+approve / review / decline by configurable thresholds (review >= 40, decline >= 70).
+
+**Planned / future:**
+
+- Geographic travel inconsistent with elapsed time ("impossible travel")
+- Account-takeover behavioral signals
+- A gradient-boosted model compared against the logistic baseline
+
+## Worked Example
+
+A $5,000 e-commerce purchase at a risky merchant scores like this:
+
+| Field | Value |
+| --- | --- |
+| `triggered_rules` | `high_amount` (+60), `risky_merchant_amount` (+20) |
+| `rule_risk_score` | 80 |
+| `fraud_probability` | model output over the engineered features |
+| `risk_score` | `max(80, round(probability * 100))` |
+| `decision` | **decline** (>= 70) |
+
+The decision is published to `transactions.scored` (persisted) and `fraud.alerts` (which the alert
+worker turns into an operator alert). Every decision retains its triggered rules and scores, so each
+alert is explainable.
 
 ## Current Phase
 
-Phase 6 adds a fraud-alert worker that consumes the `fraud.alerts` topic and dispatches each
-non-approve decision to a structured log and an optional webhook, closing the detection-to-action
-loop. It reuses the same metrics, health-check, and dead-letter patterns as the other workers.
+The pipeline is feature-complete and hardened. Recent work added measured performance and model
+calibration, Prometheus alert rules for failures and pipeline stalls, and a security/privacy note;
+see the Goals and Success Criteria above and the linked documentation.
 
 ## Local Setup
 
@@ -120,6 +171,29 @@ docker compose down
 Use `docker compose down -v` only when you intentionally want to delete local Kafka and
 PostgreSQL data.
 
+## Testing
+
+- **Unit tests** cover schemas, rules, scoring, the model artifact, storage mapping, alert
+  formatting, and config (`tests/`). Run with `pytest`.
+- **Coverage:** `pytest --cov=fraud_detection` (the `pytest-cov` plugin is a dev dependency).
+- **Live integration test** drives a real transaction through API -> Kafka -> detector ->
+  PostgreSQL and asserts the alert reaches `fraud.alerts`
+  (`tests/integration/test_live_pipeline.py`); run it against a running stack with
+  `.\scripts\run_integration_tests.ps1`.
+- **Measured behavior:** `scripts/evaluate_model.py` reports ROC/PR/calibration;
+  `scripts/benchmark.py` reports latency and throughput against the live stack.
+
+CI runs ruff, pytest, model-artifact verification, `docker compose config`, and the live
+integration job on every push.
+
+## Documentation
+
+- [Architecture and design decisions](docs/ARCHITECTURE.md)
+- [Model card](docs/MODEL_CARD.md) — features, metrics, calibration, limitations
+- [Operations runbook](docs/RUNBOOK.md) — health checks, alerts, performance, recovery
+- [Security and privacy](docs/SECURITY.md)
+- [Cost policy](docs/COST_POLICY.md)
+
 ## Cost
 
 The core pipeline uses free, open-source software and runs locally for `$0`. AWS is not required.
@@ -135,3 +209,5 @@ hard maximum of `$5` total AWS spend.
 - [x] PostgreSQL decision store and Streamlit dashboard
 - [x] End-to-end tests, operational metrics, and runbook
 - [x] Fraud-alert worker: structured-log and optional-webhook alerting on `fraud.alerts`
+- [x] Portfolio polish: CI badge, highlights, and a live dashboard screenshot
+- [x] Measured performance and calibration, Prometheus alert rules, and a security note

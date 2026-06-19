@@ -40,6 +40,29 @@ from the feature contract.
 The high recall is intentional for an alerting system, but the false-positive count demonstrates
 why human review and threshold tuning are necessary.
 
+## Calibration
+
+Reproduce with `scripts/evaluate_model.py`, which scores the committed artifact on the same holdout:
+
+| Metric | Value |
+| --- | ---: |
+| Brier score | 0.033 |
+
+Reliability (quantile bins, mean predicted probability -> observed fraud rate):
+
+| Predicted | Observed |
+| ---: | ---: |
+| 0.001 | 0.000 |
+| 0.002 | 0.000 |
+| 0.009 | 0.000 |
+| 0.028 | 0.000 |
+| 0.633 | 0.427 |
+
+The model is well-calibrated across the large low-risk majority but **over-confident in the
+highest-risk bin** (it predicts ~0.63 where the observed fraud rate is ~0.43). For a high-recall
+alerting system this conservative bias is acceptable, but probability calibration (isotonic or
+Platt scaling) would be needed before driving any automated, probability-threshold action.
+
 ## Limitations
 
 - Synthetic behavior is much simpler than real payment fraud.
