@@ -34,9 +34,9 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 1 adds a versioned Pydantic transaction contract, a FastAPI ingestion service with one
-long-lived idempotent Kafka producer, explicit Kafka topics, and a deterministic fraud-aware
-transaction simulator.
+Phase 2 adds event-time velocity features, customer device and country history, explainable
+fraud rules, auditable scored decisions, alert routing, dead-letter handling, and manual Kafka
+offset commits after successful output delivery.
 
 ## Local Setup
 
@@ -88,7 +88,7 @@ hard maximum of `$5` total AWS spend.
 
 - [x] Repository foundation, local infrastructure, cost policy, and CI
 - [x] Typed transaction API and fraud-aware simulator
-- [ ] Event-time streaming features and explainable rules
+- [x] Event-time streaming features and explainable rules
 - [ ] Offline model training and versioned online scoring
 - [ ] PostgreSQL decision store and Streamlit dashboard
 - [ ] End-to-end tests, operational metrics, and runbook

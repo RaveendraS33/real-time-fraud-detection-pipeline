@@ -25,6 +25,12 @@ class PaymentChannel(StrEnum):
     MOBILE = "mobile"
 
 
+class DecisionOutcome(StrEnum):
+    APPROVE = "approve"
+    REVIEW = "review"
+    DECLINE = "decline"
+
+
 class SimulationMetadata(BaseModel):
     """Ground truth for synthetic evaluation; never used as a model feature."""
 
@@ -63,4 +69,34 @@ class AcceptedTransaction(BaseModel):
     transaction_id: UUID
     status: Literal["accepted"] = "accepted"
     accepted_at: datetime
+
+
+class FeatureSnapshot(BaseModel):
+    amount: float
+    transaction_count_5m: int = Field(ge=1)
+    is_new_device: bool
+    is_new_country: bool
+    is_risky_merchant: bool
+
+
+class FraudDecision(BaseModel):
+    """Auditable detector output sent to scored and alert topics."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    transaction_id: UUID
+    customer_id: Identifier
+    event_time: AwareDatetime
+    amount: float
+    currency: Currency
+    risk_score: int = Field(ge=0, le=100)
+    fraud_probability: float = Field(ge=0, le=1)
+    decision: DecisionOutcome
+    triggered_rules: list[str]
+    features: FeatureSnapshot
+    detector_version: str
+    processed_at: AwareDatetime
+    simulation_is_fraud: bool | None = None
+
+    def kafka_key(self) -> str:
+        return self.customer_id
 

@@ -43,6 +43,7 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions.raw --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions.scored --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic fraud.alerts --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions.dead_letter --partitions 1 --replication-factor 1
     networks:
       - fraud-network
 
@@ -85,6 +86,25 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks:
+      - fraud-network
+
+  detector:
+    build:
+      context: .
+      dockerfile: services/detector/Dockerfile
+    container_name: fraud-detector
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      TRANSACTIONS_TOPIC: transactions.raw
+      FRAUD_DECISIONS_TOPIC: transactions.scored
+      FRAUD_ALERTS_TOPIC: fraud.alerts
+      DEAD_LETTER_TOPIC: transactions.dead_letter
+    restart: unless-stopped
     networks:
       - fraud-network
 

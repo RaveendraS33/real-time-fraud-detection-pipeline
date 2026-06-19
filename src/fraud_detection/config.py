@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     transactions_topic: str = "transactions.raw"
     fraud_decisions_topic: str = "transactions.scored"
     fraud_alerts_topic: str = "fraud.alerts"
+    dead_letter_topic: str = "transactions.dead_letter"
+    high_amount_threshold: float = 2_500
+    velocity_window_seconds: int = 300
+    velocity_count_threshold: int = 5
+    review_score_threshold: int = 40
+    decline_score_threshold: int = 70
     database_url: str = (
         "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
     )
@@ -30,4 +36,3 @@ def get_settings() -> Settings:
     """Return one immutable-by-convention settings instance per process."""
 
     return Settings()
-
