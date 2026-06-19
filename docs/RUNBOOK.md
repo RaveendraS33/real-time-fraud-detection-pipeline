@@ -14,7 +14,7 @@ Expected endpoints:
 | Transaction API | <http://localhost:8000/health> | `{"status":"healthy"}` |
 | API documentation | <http://localhost:8000/docs> | OpenAPI page loads |
 | Fraud dashboard | <http://localhost:8501> | Metrics and investigation queue render |
-| Prometheus | <http://localhost:9090/targets> | Three scrape targets are `UP` |
+| Prometheus | <http://localhost:9090/targets> | Four scrape targets are `UP` |
 
 Generate a short stream:
 
@@ -34,12 +34,13 @@ Run the live integration test:
 docker compose logs transaction-api --tail=100
 docker compose logs detector --tail=100
 docker compose logs decision-store --tail=100
+docker compose logs alerter --tail=100
 docker compose logs postgres --tail=100
 ```
 
 The detector log includes transaction ID, outcome, risk score, and triggered rules. Prometheus
 tracks accepted API requests, decision counts, detector latency, model probability distribution,
-storage counts, and failure counters.
+storage counts, alert counts, and failure counters.
 
 ## Data Checks
 
@@ -60,6 +61,7 @@ Consumer lag:
 ```powershell
 docker exec fraud-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group fraud-detector-v1
 docker exec fraud-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group decision-store-v1
+docker exec fraud-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group fraud-alerter-v1
 ```
 
 ## Common Failures
@@ -83,6 +85,13 @@ artifact using the CI check. A feature-contract mismatch intentionally prevents 
 
 Confirm PostgreSQL and `fraud-decision-store` are running. The dashboard retries automatically on
 its next five-second refresh.
+
+### Fraud alerts are not delivered
+
+Check `docker compose logs alerter` and the `fraud-alerter-v1` consumer lag. Every alert is written
+to the alerter log (`FRAUD_ALERT ...`) regardless of webhook status. Webhook delivery is
+best-effort: failures increment `fraud_alert_failures_total{stage="webhook"}` and are logged, but
+never block or re-drive the pipeline. Set `ALERT_WEBHOOK_URL` to enable webhook forwarding.
 
 ## Stop and Reset
 

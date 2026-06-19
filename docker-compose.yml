@@ -141,6 +141,31 @@ services:
     networks:
       - fraud-network
 
+  alerter:
+    build:
+      context: .
+      dockerfile: services/alerter/Dockerfile
+    container_name: fraud-alerter
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      FRAUD_ALERTS_TOPIC: fraud.alerts
+      DEAD_LETTER_TOPIC: transactions.dead_letter
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      METRICS_PORT: 9103
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9103/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - fraud-network
+
   dashboard:
     build:
       context: .
@@ -171,6 +196,8 @@ services:
       detector:
         condition: service_healthy
       decision-store:
+        condition: service_healthy
+      alerter:
         condition: service_healthy
       transaction-api:
         condition: service_healthy

@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from datetime import UTC, datetime
@@ -6,6 +7,7 @@ from uuid import uuid4
 import httpx
 import psycopg
 import pytest
+from confluent_kafka import Consumer
 
 RUN_INTEGRATION_TESTS = os.getenv("RUN_INTEGRATION_TESTS") == "1"
 API_URL = os.getenv("API_URL", "http://localhost:8000")
@@ -13,6 +15,8 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection",
 )
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+ALERTS_TOPIC = os.getenv("FRAUD_ALERTS_TOPIC", "fraud.alerts")
 
 pytestmark = [
     pytest.mark.integration,
@@ -58,6 +62,30 @@ def wait_for_decision(transaction_id: str, timeout_seconds: int = 60) -> tuple:
     pytest.fail(f"decision {transaction_id} did not reach PostgreSQL")
 
 
+def wait_for_alert(transaction_id: str, timeout_seconds: int = 60) -> dict:
+    consumer = Consumer(
+        {
+            "bootstrap.servers": KAFKA_BOOTSTRAP,
+            "group.id": f"integration-alert-check-{uuid4()}",
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+        }
+    )
+    consumer.subscribe([ALERTS_TOPIC])
+    deadline = time.monotonic() + timeout_seconds
+    try:
+        while time.monotonic() < deadline:
+            message = consumer.poll(1.0)
+            if message is None or message.error():
+                continue
+            payload = json.loads(message.value())
+            if payload.get("transaction_id") == transaction_id:
+                return payload
+    finally:
+        consumer.close()
+    pytest.fail(f"alert {transaction_id} did not reach {ALERTS_TOPIC}")
+
+
 def test_high_risk_transaction_reaches_hybrid_decision_store() -> None:
     wait_for_api()
     transaction_id = str(uuid4())
@@ -92,3 +120,7 @@ def test_high_risk_transaction_reaches_hybrid_decision_store() -> None:
     assert rule_score == 80
     assert 0 <= probability <= 1
     assert detector_version == "hybrid-rules-v1+logreg-v1"
+
+    alert = wait_for_alert(transaction_id)
+    assert alert["decision"] == "decline"
+    assert alert["transaction_id"] == transaction_id

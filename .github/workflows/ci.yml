@@ -46,7 +46,7 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev,storage]"
       - name: Start integration stack
-        run: docker compose up -d --build kafka postgres transaction-api detector decision-store
+        run: docker compose up -d --build kafka postgres transaction-api detector decision-store alerter
       - name: Verify API to Kafka to detector to PostgreSQL
         env:
           RUN_INTEGRATION_TESTS: "1"

@@ -17,11 +17,14 @@ flowchart LR
     DET --> K2["Kafka transactions.scored"]
     DET --> K3["Kafka fraud.alerts"]
     K2 --> STORE["Decision store"]
+    K3 --> ALR["Alert worker"]
+    ALR --> SINK["Structured log + optional webhook"]
     STORE --> DB["PostgreSQL"]
     DB --> UI["Streamlit dashboard"]
     API -. metrics .-> PROM["Prometheus"]
     DET -. metrics .-> PROM
     STORE -. metrics .-> PROM
+    ALR -. metrics .-> PROM
 ```
 
 See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
@@ -37,8 +40,9 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 5 adds Prometheus service metrics and worker health checks, a live Docker integration test,
-model-artifact verification in CI, and an operations runbook.
+Phase 6 adds a fraud-alert worker that consumes the `fraud.alerts` topic and dispatches each
+non-approve decision to a structured log and an optional webhook, closing the detection-to-action
+loop. It reuses the same metrics, health-check, and dead-letter patterns as the other workers.
 
 ## Local Setup
 
@@ -106,3 +110,4 @@ hard maximum of `$5` total AWS spend.
 - [x] Offline model training and versioned online scoring
 - [x] PostgreSQL decision store and Streamlit dashboard
 - [x] End-to-end tests, operational metrics, and runbook
+- [x] Fraud-alert worker: structured-log and optional-webhook alerting on `fraud.alerts`

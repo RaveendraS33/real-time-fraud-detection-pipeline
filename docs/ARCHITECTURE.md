@@ -10,7 +10,8 @@ flowchart LR
     D --> E["Kafka: transactions.scored"]
     D --> F["Kafka: fraud.alerts"]
     E --> G["PostgreSQL decision store"]
-    F --> G
+    F --> I["Alert worker"]
+    I --> J["Structured log + optional webhook"]
     G --> H["Streamlit operations dashboard"]
 ```
 
@@ -27,4 +28,7 @@ flowchart LR
   feature values, and processing timestamp.
 - **Idempotent storage:** PostgreSQL upserts by transaction ID and accepts only an equal or newer
   processing timestamp, making Kafka replays safe.
+- **Closed alert loop:** a dedicated worker consumes `fraud.alerts` and emits each non-approve
+  decision to a structured log and an optional webhook; webhook delivery is best-effort so a slow
+  or failing external sink cannot stall the streaming pipeline.
 - **Reproducibility:** pinned container images, automated tests, and CI validate each change.

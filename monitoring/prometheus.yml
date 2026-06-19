@@ -16,3 +16,7 @@ scrape_configs:
     static_configs:
       - targets: ["decision-store:9102"]
 
+  - job_name: alerter
+    static_configs:
+      - targets: ["alerter:9103"]
+

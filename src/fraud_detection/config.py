@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     model_path: str = "models/fraud_logreg_v1.json"
     metrics_port: int = 9_101
     database_url: str = "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
+    alert_webhook_url: str = ""
+    alert_webhook_timeout_seconds: float = 3.0
 
 
 @lru_cache

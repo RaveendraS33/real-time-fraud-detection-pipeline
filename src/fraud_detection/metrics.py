@@ -38,3 +38,19 @@ STORE_FAILURES = Counter(
     "Decision-store failures by stage",
     ("stage",),
 )
+
+ALERTS_RECEIVED = Counter(
+    "fraud_alerts_received_total",
+    "Fraud alerts consumed from the alerts topic by decision",
+    ("decision",),
+)
+ALERTS_DISPATCHED = Counter(
+    "fraud_alerts_dispatched_total",
+    "Fraud alerts dispatched by sink",
+    ("sink",),
+)
+ALERT_FAILURES = Counter(
+    "fraud_alert_failures_total",
+    "Alerter failures by stage",
+    ("stage",),
+)
