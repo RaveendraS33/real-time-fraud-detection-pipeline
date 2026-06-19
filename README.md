@@ -1,11 +1,28 @@
 # Real-Time Fraud Detection Pipeline
 
+[![CI](https://github.com/RaveendraS33/real-time-fraud-detection-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/RaveendraS33/real-time-fraud-detection-pipeline/actions/workflows/ci.yml)
+
 A local-first streaming data and machine-learning project that scores payment transactions,
 explains suspicious activity, and presents fraud operations metrics in near real time.
 
 The project is designed as a job-search portfolio system: reproducible infrastructure,
 versioned data contracts, testable detection logic, operational visibility, and clear cost
 controls matter as much as producing a prediction.
+
+## Highlights
+
+- **End-to-end streaming pipeline:** FastAPI ingestion -> Kafka -> a feature/scoring detector ->
+  decision store -> Streamlit operations dashboard, all reproducible via Docker Compose.
+- **Hybrid detection:** explainable deterministic rules combined with a versioned logistic-regression
+  model, offline-trained and shipped as a compact JSON artifact for dependency-free online scoring.
+- **Production-minded reliability:** manual-commit Kafka consumers, a dead-letter topic for poison
+  messages, a dedicated alert worker on the `fraud.alerts` topic, and graceful shutdown.
+- **Observability:** Prometheus scrapes every service, and each worker's metrics endpoint doubles as
+  its Docker health check.
+- **Tested and CI-gated:** unit tests plus a live Docker integration test
+  (API -> Kafka -> detector -> PostgreSQL, with alert verification); CI runs ruff, pytest,
+  model-artifact verification, and the integration job.
+- **$0 and local-first:** the entire system runs on free, open-source software with no cloud spend.
 
 ## Architecture
 
@@ -28,6 +45,13 @@ flowchart LR
 ```
 
 See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
+
+## Dashboard
+
+The Streamlit operations dashboard reads live decisions from PostgreSQL: fraud-operations metrics,
+the approve/decline mix, transaction volume over time, and an investigation queue of recent alerts.
+
+![Fraud operations dashboard showing transaction metrics, the decision mix, transaction volume over time, and an investigation queue of declined transactions](docs/screenshots/dashboard.png)
 
 ## Planned Detection Signals
 
