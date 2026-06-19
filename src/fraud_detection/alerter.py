@@ -4,12 +4,15 @@ This worker closes the detection->action loop: the detector publishes every
 non-approve decision to the fraud.alerts topic, and this service turns those into
 operator-facing alerts. The durable sink is a structured log line (always on, $0);
 an optional webhook (ALERT_WEBHOOK_URL) forwards alerts to an external system such
-as Slack or PagerDuty. Webhook delivery is best-effort -- a flaky external sink must
-not block or re-drive the pipeline, so failures are logged and counted, not retried.
+as Slack or PagerDuty. Webhook delivery uses bounded exponential-backoff retries; if all
+retries are exhausted the alert is captured in the dead-letter topic (replayable via
+scripts/replay_dead_letter.py) rather than dropped, so a flaky external sink never silently
+loses an alert and never blocks or re-drives the pipeline.
 """
 
 import logging
 import signal
+import time
 from threading import Event
 
 import httpx
@@ -39,6 +42,27 @@ def format_alert(decision: FraudDecision) -> str:
     )
 
 
+def deliver_webhook(
+    http: httpx.Client,
+    url: str,
+    payload: str,
+    max_retries: int,
+    backoff_seconds: float,
+    sleep=time.sleep,
+) -> bool:
+    """POST the alert with bounded exponential-backoff retries; return delivery success."""
+    for attempt in range(max_retries):
+        try:
+            response = http.post(url, content=payload, headers={"content-type": "application/json"})
+            response.raise_for_status()
+            return True
+        except httpx.HTTPError as exc:
+            logger.warning("Alert webhook attempt %s/%s failed: %s", attempt + 1, max_retries, exc)
+            if attempt + 1 < max_retries:
+                sleep(backoff_seconds * (2**attempt))
+    return False
+
+
 class AlertWorker:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -59,6 +83,8 @@ class AlertWorker:
             }
         )
         self._webhook_url = settings.alert_webhook_url
+        self._webhook_max_retries = settings.alert_webhook_max_retries
+        self._webhook_backoff = settings.alert_webhook_backoff_seconds
         self._http = (
             httpx.Client(timeout=settings.alert_webhook_timeout_seconds)
             if self._webhook_url
@@ -120,17 +146,30 @@ class AlertWorker:
 
         if self._http is None:
             return
-        try:
-            response = self._http.post(
-                self._webhook_url,
-                content=decision.model_dump_json(),
-                headers={"content-type": "application/json"},
-            )
-            response.raise_for_status()
+
+        payload = decision.model_dump_json()
+        if deliver_webhook(
+            self._http,
+            self._webhook_url,
+            payload,
+            self._webhook_max_retries,
+            self._webhook_backoff,
+        ):
             ALERTS_DISPATCHED.labels(sink="webhook").inc()
-        except httpx.HTTPError as exc:
-            ALERT_FAILURES.labels(stage="webhook").inc()
-            logger.warning("Alert webhook delivery failed: %s", exc)
+            return
+
+        # Retries exhausted: capture the undelivered alert in the dead-letter topic
+        # instead of dropping it, so it can be replayed (scripts/replay_dead_letter.py).
+        ALERT_FAILURES.labels(stage="webhook").inc()
+        logger.error("Alert webhook delivery exhausted; capturing alert in dead-letter topic")
+        self._producer.produce(
+            self._settings.dead_letter_topic,
+            key=decision.kafka_key().encode(),
+            value=payload.encode(),
+            headers={"error": "alert webhook delivery exhausted", "source": "alerter-webhook"},
+        )
+        self._producer.flush(10)
+        ALERTS_DISPATCHED.labels(sink="dead_letter").inc()
 
 
 def main() -> None:

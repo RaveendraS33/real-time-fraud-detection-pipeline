@@ -35,3 +35,15 @@ def test_naive_event_time_is_rejected(valid_transaction_data: dict) -> None:
 
     with pytest.raises(ValidationError):
         TransactionEvent(**data)
+
+
+def test_unknown_future_fields_are_ignored(valid_transaction_data: dict) -> None:
+    # Forward-compatible schema evolution: a newer producer may add fields the
+    # current contract does not know about; those must be ignored, not rejected.
+    data = valid_transaction_data
+    data["new_signal_v2"] = "future"
+
+    transaction = TransactionEvent(**data)
+
+    assert transaction.schema_version == "1.0"
+    assert not hasattr(transaction, "new_signal_v2")

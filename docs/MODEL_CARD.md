@@ -80,6 +80,22 @@ Platt scaling) would be needed before driving any automated, probability-thresho
 ```
 
 The JSON artifact contains the scaler parameters and logistic coefficients, allowing the online
-service to score without shipping scikit-learn in its container. CI retrains on Linux and checks
-the contract, metrics, and coefficients with a small tolerance for platform-level floating-point
-differences.
+service to score without shipping scikit-learn in its container.
+
+## Versioning and Governance
+
+The model ships as a single versioned JSON artifact (`models/fraud_logreg_v1.json`) carrying
+`model_version`, `artifact_version`, the feature contract, the scaler + coefficients, and the full
+training configuration and metrics. Promotion is gated, not manual:
+
+- **Reproducible training:** `scripts/train_model.py` is deterministic (fixed seed and split), so
+  the artifact can be regenerated on any machine.
+- **CI verification:** every push retrains on Linux and runs `scripts/verify_model_artifact.py`
+  against the committed artifact. Contract fields (version, feature names, threshold, training
+  config) must match exactly; model parameters must match within `rel_tol=1e-5, abs_tol=1e-7`
+  (tight enough to catch a real model change, loose enough to tolerate cross-platform BLAS
+  float differences); derived metrics within `abs_tol=5e-3` and confusion counts within `10`,
+  because a sub-tolerance parameter drift can flip a borderline prediction.
+- **Promotion:** ship a new model by training a new `model_version`, committing the new artifact,
+  and updating this card. The detector loads the artifact at startup and refuses to start on a
+  feature-contract mismatch, so an incompatible model cannot silently serve.

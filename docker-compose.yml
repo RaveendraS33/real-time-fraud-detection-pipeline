@@ -218,6 +218,18 @@ services:
     networks:
       - fraud-network
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: fraud-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - fraud-network
+
 networks:
   fraud-network:
     name: fraud-network

@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fraud_detection.alerter import format_alert
+import httpx
+
+from fraud_detection.alerter import deliver_webhook, format_alert
 from fraud_detection.schemas import FeatureSnapshot, FraudDecision
 
 
@@ -43,3 +45,42 @@ def test_format_alert_includes_key_fields() -> None:
 
 def test_format_alert_is_single_line() -> None:
     assert "\n" not in format_alert(_decision())
+
+
+class _StubResponse:
+    def raise_for_status(self) -> None:
+        return None
+
+
+class _FlakyClient:
+    def __init__(self, fail_times: int) -> None:
+        self.fail_times = fail_times
+        self.calls = 0
+
+    def post(self, *args, **kwargs) -> _StubResponse:
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise httpx.HTTPError("boom")
+        return _StubResponse()
+
+
+def test_deliver_webhook_retries_then_succeeds() -> None:
+    client = _FlakyClient(fail_times=2)
+
+    delivered = deliver_webhook(
+        client, "http://sink", "{}", max_retries=3, backoff_seconds=0, sleep=lambda _: None
+    )
+
+    assert delivered is True
+    assert client.calls == 3
+
+
+def test_deliver_webhook_returns_false_when_exhausted() -> None:
+    client = _FlakyClient(fail_times=10)
+
+    delivered = deliver_webhook(
+        client, "http://sink", "{}", max_retries=3, backoff_seconds=0, sleep=lambda _: None
+    )
+
+    assert delivered is False
+    assert client.calls == 3

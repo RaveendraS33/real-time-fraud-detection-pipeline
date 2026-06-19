@@ -15,8 +15,9 @@ controls matter as much as producing a prediction.
   decision store -> Streamlit operations dashboard, all reproducible via Docker Compose.
 - **Hybrid detection:** explainable deterministic rules combined with a versioned logistic-regression
   model, offline-trained and shipped as a compact JSON artifact for dependency-free online scoring.
-- **Production-minded reliability:** manual-commit Kafka consumers, a dead-letter topic for poison
-  messages, a dedicated alert worker on the `fraud.alerts` topic, and graceful shutdown.
+- **Production-minded reliability:** manual-commit Kafka consumers, a dead-letter topic with replay
+  tooling, an alert worker with retry/backoff and dead-letter capture, Prometheus alert rules routed
+  to Alertmanager, and graceful shutdown.
 - **Observability:** Prometheus scrapes every service, and each worker's metrics endpoint doubles as
   its Docker health check.
 - **Tested and CI-gated:** unit tests plus a live Docker integration test
@@ -211,3 +212,5 @@ hard maximum of `$5` total AWS spend.
 - [x] Fraud-alert worker: structured-log and optional-webhook alerting on `fraud.alerts`
 - [x] Portfolio polish: CI badge, highlights, and a live dashboard screenshot
 - [x] Measured performance and calibration, Prometheus alert rules, and a security note
+- [x] Fault tolerance and ops: alert retry/backoff + dead-letter capture and replay, Alertmanager
+      routing, and failure-mode + schema-evolution tests

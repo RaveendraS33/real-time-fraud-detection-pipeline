@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
     alert_webhook_url: str = ""
     alert_webhook_timeout_seconds: float = 3.0
+    alert_webhook_max_retries: int = 3
+    alert_webhook_backoff_seconds: float = 0.5
 
 
 @lru_cache

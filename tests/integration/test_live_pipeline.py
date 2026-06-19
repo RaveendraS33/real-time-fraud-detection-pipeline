@@ -7,7 +7,7 @@ from uuid import uuid4
 import httpx
 import psycopg
 import pytest
-from confluent_kafka import Consumer
+from confluent_kafka import Consumer, Producer
 
 RUN_INTEGRATION_TESTS = os.getenv("RUN_INTEGRATION_TESTS") == "1"
 API_URL = os.getenv("API_URL", "http://localhost:8000")
@@ -124,3 +124,33 @@ def test_high_risk_transaction_reaches_hybrid_decision_store() -> None:
     alert = wait_for_alert(transaction_id)
     assert alert["decision"] == "decline"
     assert alert["transaction_id"] == transaction_id
+
+
+def test_malformed_event_is_dead_lettered() -> None:
+    marker = f"not-json-{uuid4()}".encode()
+    producer = Producer(
+        {"bootstrap.servers": KAFKA_BOOTSTRAP, "client.id": "integration-malformed"}
+    )
+    producer.produce("transactions.raw", value=marker)
+    producer.flush(10)
+
+    consumer = Consumer(
+        {
+            "bootstrap.servers": KAFKA_BOOTSTRAP,
+            "group.id": f"integration-dlq-check-{uuid4()}",
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+        }
+    )
+    consumer.subscribe(["transactions.dead_letter"])
+    deadline = time.monotonic() + 60
+    try:
+        while time.monotonic() < deadline:
+            message = consumer.poll(1.0)
+            if message is None or message.error():
+                continue
+            if message.value() == marker:
+                return
+    finally:
+        consumer.close()
+    pytest.fail("malformed event did not reach transactions.dead_letter")

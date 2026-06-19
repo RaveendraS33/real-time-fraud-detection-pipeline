@@ -1,0 +1,12 @@
+route:
+  receiver: default
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+
+receivers:
+  - name: default
+    # Wire a real integration here (Slack / PagerDuty / email / webhook). Left empty for
+    # the local demo, so alerts are still routed and visible in the Alertmanager UI
+    # (http://localhost:9093) without sending to an external service.
