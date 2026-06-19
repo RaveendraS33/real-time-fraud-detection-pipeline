@@ -34,9 +34,8 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 2 adds event-time velocity features, customer device and country history, explainable
-fraud rules, auditable scored decisions, alert routing, dead-letter handling, and manual Kafka
-offset commits after successful output delivery.
+Phase 3 persists scored decisions in PostgreSQL with replay-safe upserts and presents live fraud
+metrics, decision volume, simulated recall, and an investigation queue in Streamlit.
 
 ## Local Setup
 
@@ -53,6 +52,8 @@ docker compose up -d
 
 Open the API documentation at <http://localhost:8000/docs>, or inspect a valid event at
 <http://localhost:8000/transactions/sample>.
+
+Open the fraud operations dashboard at <http://localhost:8501>.
 
 Generate a small mixed stream:
 
@@ -90,5 +91,5 @@ hard maximum of `$5` total AWS spend.
 - [x] Typed transaction API and fraud-aware simulator
 - [x] Event-time streaming features and explainable rules
 - [ ] Offline model training and versioned online scoring
-- [ ] PostgreSQL decision store and Streamlit dashboard
+- [x] PostgreSQL decision store and Streamlit dashboard
 - [ ] End-to-end tests, operational metrics, and runbook

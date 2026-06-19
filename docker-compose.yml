@@ -108,6 +108,48 @@ services:
     networks:
       - fraud-network
 
+  decision-store:
+    build:
+      context: .
+      dockerfile: services/storage/Dockerfile
+    container_name: fraud-decision-store
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      FRAUD_DECISIONS_TOPIC: transactions.scored
+      DEAD_LETTER_TOPIC: transactions.dead_letter
+      DATABASE_URL: postgresql://fraud_app:fraud_dev_password@postgres:5432/fraud_detection
+    restart: unless-stopped
+    networks:
+      - fraud-network
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    container_name: fraud-dashboard
+    depends_on:
+      decision-store:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://fraud_app:fraud_dev_password@postgres:5432/fraud_detection
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      - fraud-network
+
 networks:
   fraud-network:
     name: fraud-network

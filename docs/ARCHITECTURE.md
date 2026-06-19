@@ -23,5 +23,6 @@ flowchart LR
 - **Event time:** velocity features use transaction timestamps rather than processing time.
 - **Traceability:** every decision retains its transaction ID, model version, triggered rules,
   feature values, and processing timestamp.
+- **Idempotent storage:** PostgreSQL upserts by transaction ID and accepts only an equal or newer
+  processing timestamp, making Kafka replays safe.
 - **Reproducibility:** pinned container images, automated tests, and CI validate each change.
-

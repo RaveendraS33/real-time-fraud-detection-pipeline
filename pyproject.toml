@@ -17,6 +17,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+storage = [
+  "psycopg[binary]>=3.2,<4",
+]
+dashboard = [
+  "pandas>=2.2,<4",
+  "plotly>=6,<7",
+  "psycopg[binary]>=3.2,<4",
+  "streamlit>=1.42,<2",
+]
 dev = [
   "pytest>=8.3,<9",
   "pytest-cov>=6,<7",
