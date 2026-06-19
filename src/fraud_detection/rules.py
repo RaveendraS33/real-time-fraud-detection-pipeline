@@ -42,12 +42,11 @@ class FraudRuleEngine:
             score += 20
 
         score = min(score, 100)
+        return RuleResult(score, triggered, self.decision_for_score(score))
+
+    def decision_for_score(self, score: int) -> DecisionOutcome:
         if score >= self._settings.decline_score_threshold:
-            decision = DecisionOutcome.DECLINE
-        elif score >= self._settings.review_score_threshold:
-            decision = DecisionOutcome.REVIEW
-        else:
-            decision = DecisionOutcome.APPROVE
-
-        return RuleResult(score, triggered, decision)
-
+            return DecisionOutcome.DECLINE
+        if score >= self._settings.review_score_threshold:
+            return DecisionOutcome.REVIEW
+        return DecisionOutcome.APPROVE

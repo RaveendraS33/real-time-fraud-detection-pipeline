@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS fraud_decisions (
     amount NUMERIC(14, 2) NOT NULL,
     currency VARCHAR(3) NOT NULL,
     risk_score SMALLINT NOT NULL CHECK (risk_score BETWEEN 0 AND 100),
+    rule_risk_score SMALLINT NOT NULL CHECK (rule_risk_score BETWEEN 0 AND 100),
     fraud_probability DOUBLE PRECISION NOT NULL CHECK (fraud_probability BETWEEN 0 AND 1),
     decision VARCHAR(10) NOT NULL CHECK (decision IN ('approve', 'review', 'decline')),
     triggered_rules JSONB NOT NULL,
@@ -36,14 +37,20 @@ INDEX_STATEMENTS = (
     "ON fraud_decisions (risk_score DESC)",
 )
 
+MIGRATION_STATEMENTS = (
+    "ALTER TABLE fraud_decisions ADD COLUMN IF NOT EXISTS "
+    "rule_risk_score SMALLINT NOT NULL DEFAULT 0",
+)
+
 UPSERT_SQL = """
 INSERT INTO fraud_decisions (
-    transaction_id, customer_id, event_time, amount, currency, risk_score,
+    transaction_id, customer_id, event_time, amount, currency, risk_score, rule_risk_score,
     fraud_probability, decision, triggered_rules, features, detector_version,
     processed_at, simulation_is_fraud
 ) VALUES (
     %(transaction_id)s, %(customer_id)s, %(event_time)s, %(amount)s, %(currency)s,
-    %(risk_score)s, %(fraud_probability)s, %(decision)s, %(triggered_rules)s,
+    %(risk_score)s, %(rule_risk_score)s, %(fraud_probability)s, %(decision)s,
+    %(triggered_rules)s,
     %(features)s, %(detector_version)s, %(processed_at)s, %(simulation_is_fraud)s
 )
 ON CONFLICT (transaction_id) DO UPDATE SET
@@ -52,6 +59,7 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     amount = EXCLUDED.amount,
     currency = EXCLUDED.currency,
     risk_score = EXCLUDED.risk_score,
+    rule_risk_score = EXCLUDED.rule_risk_score,
     fraud_probability = EXCLUDED.fraud_probability,
     decision = EXCLUDED.decision,
     triggered_rules = EXCLUDED.triggered_rules,
@@ -72,6 +80,7 @@ def decision_to_params(decision: FraudDecision) -> dict[str, Any]:
         "amount": decision.amount,
         "currency": decision.currency.value,
         "risk_score": decision.risk_score,
+        "rule_risk_score": decision.rule_risk_score,
         "fraud_probability": decision.fraud_probability,
         "decision": decision.decision.value,
         "triggered_rules": Jsonb(decision.triggered_rules),
@@ -96,10 +105,11 @@ class DecisionRepository:
     def ensure_schema(self) -> None:
         with self._connect(self._database_url) as connection:
             connection.execute(CREATE_TABLE_SQL)
+            for statement in MIGRATION_STATEMENTS:
+                connection.execute(statement)
             for statement in INDEX_STATEMENTS:
                 connection.execute(statement)
 
     def upsert(self, decision: FraudDecision) -> None:
         with self._connect(self._database_url) as connection:
             connection.execute(UPSERT_SQL, decision_to_params(decision))
-

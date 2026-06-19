@@ -35,17 +35,27 @@ class TransactionSimulator:
         scenario = None
 
         if is_fraud:
-            scenario = self._random.choice(("high_amount", "foreign_device"))
+            scenario = self._random.choice(
+                ("high_amount", "foreign_device", "card_testing")
+            )
             if scenario == "high_amount":
-                amount = round(self._random.uniform(2_500, 9_000), 2)
+                amount = round(self._random.uniform(1_000, 8_000), 2)
                 category = "electronics"
-            else:
-                amount = round(self._random.uniform(250, 1_500), 2)
+            elif scenario == "foreign_device":
+                amount = round(self._random.uniform(80, 1_500), 2)
                 country, city, latitude, longitude, currency = self._random.choice(LOCATIONS[2:])
+            else:
+                amount = round(self._random.uniform(2, 100), 2)
+                merchant_id, category = "merchant-digital", "digital_goods"
             device_id = f"new-device-{uuid4().hex[:10]}"
         else:
-            amount = round(max(1, self._random.lognormvariate(3.7, 0.75)), 2)
-            device_id = f"device-{customer_number}"
+            amount = round(max(1, self._random.lognormvariate(4.2, 1.05)), 2)
+            if self._random.random() < 0.03:
+                amount = round(self._random.uniform(500, 1_800), 2)
+            if self._random.random() < 0.05:
+                device_id = f"replacement-device-{uuid4().hex[:10]}"
+            else:
+                device_id = f"device-{customer_number}"
 
         return TransactionEvent(
             customer_id=f"customer-{customer_number}",
@@ -64,4 +74,3 @@ class TransactionSimulator:
             event_time=datetime.now(UTC),
             simulation=SimulationMetadata(is_fraud=is_fraud, scenario=scenario),
         )
-

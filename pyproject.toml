@@ -20,6 +20,9 @@ dependencies = [
 storage = [
   "psycopg[binary]>=3.2,<4",
 ]
+ml = [
+  "scikit-learn>=1.6,<2",
+]
 dashboard = [
   "pandas>=2.2,<4",
   "plotly>=6,<7",

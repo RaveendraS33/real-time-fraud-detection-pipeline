@@ -15,6 +15,7 @@ def test_decision_is_converted_to_database_parameters() -> None:
         amount=3_500,
         currency="USD",
         risk_score=80,
+        rule_risk_score=80,
         fraud_probability=0.8,
         decision="decline",
         triggered_rules=["high_amount", "risky_merchant_amount"],
@@ -34,7 +35,7 @@ def test_decision_is_converted_to_database_parameters() -> None:
 
     assert params["transaction_id"] == decision.transaction_id
     assert params["decision"] == "decline"
+    assert params["rule_risk_score"] == 80
     assert params["currency"] == "USD"
     assert isinstance(params["triggered_rules"], Jsonb)
     assert isinstance(params["features"], Jsonb)
-

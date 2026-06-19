@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     velocity_count_threshold: int = 5
     review_score_threshold: int = 40
     decline_score_threshold: int = 70
+    model_path: str = "models/fraud_logreg_v1.json"
     database_url: str = (
         "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
     )

@@ -1,0 +1,53 @@
+{
+  "artifact_version": 1,
+  "coefficients": [
+    1.1348390962380295,
+    -0.16751798335826948,
+    2.3984656818356402,
+    -0.13583960214973168,
+    1.3283953716649834
+  ],
+  "decision_threshold": 0.5,
+  "feature_names": [
+    "log_amount",
+    "transaction_count_5m",
+    "is_new_device",
+    "is_new_country",
+    "is_risky_merchant"
+  ],
+  "intercept": -4.104185941828906,
+  "model_version": "logreg-v1",
+  "scaler_mean": [
+    4.463521361298627,
+    1.5870625,
+    0.123875,
+    0.03125,
+    0.5289375
+  ],
+  "scaler_scale": [
+    1.3081994865294029,
+    0.7536876813998031,
+    0.3294388932335884,
+    0.17399263633843817,
+    0.49916191871348725
+  ],
+  "training": {
+    "fraud_rate": 0.08,
+    "metrics": {
+      "average_precision": 0.889,
+      "confusion_matrix": {
+        "false_negative": 0,
+        "false_positive": 168,
+        "true_negative": 3490,
+        "true_positive": 342
+      },
+      "precision_at_0_5": 0.6706,
+      "recall_at_0_5": 1.0,
+      "roc_auc": 0.9902
+    },
+    "samples": 20000,
+    "seed": 42,
+    "split": "first 80% train, final 20% test",
+    "training_data_start": "2026-01-01T00:00:00+00:00"
+  }
+}

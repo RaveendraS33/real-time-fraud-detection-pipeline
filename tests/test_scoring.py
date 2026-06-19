@@ -17,6 +17,8 @@ def test_normal_transaction_is_approved(valid_transaction_data: dict) -> None:
     assert decision.decision is DecisionOutcome.APPROVE
     assert decision.risk_score == 0
     assert decision.triggered_rules == []
+    assert decision.detector_version == "hybrid-rules-v1+logreg-v1"
+    assert 0 <= decision.fraud_probability <= 1
 
 
 def test_high_amount_risky_merchant_is_declined(valid_transaction_data: dict) -> None:
@@ -29,7 +31,8 @@ def test_high_amount_risky_merchant_is_declined(valid_transaction_data: dict) ->
     )
 
     assert decision.decision is DecisionOutcome.DECLINE
-    assert decision.risk_score == 80
+    assert decision.risk_score >= 80
+    assert decision.rule_risk_score == 80
     assert decision.triggered_rules == ["high_amount", "risky_merchant_amount"]
 
 
@@ -77,4 +80,3 @@ def test_new_device_and_country_are_detected_after_baseline(
     assert decision.features.is_new_device is True
     assert decision.features.is_new_country is True
     assert decision.decision is DecisionOutcome.REVIEW
-

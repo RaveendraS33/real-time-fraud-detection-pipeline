@@ -27,7 +27,7 @@ st.caption("Live transaction decisions and investigation queue")
 def load_decisions(limit: int = 2_000) -> pd.DataFrame:
     query = """
         SELECT transaction_id, customer_id, event_time, amount, currency,
-               risk_score, fraud_probability, decision, triggered_rules,
+               risk_score, rule_risk_score, fraud_probability, decision, triggered_rules,
                detector_version, processed_at, simulation_is_fraud
         FROM fraud_decisions
         ORDER BY event_time DESC
@@ -108,8 +108,11 @@ def render_dashboard() -> None:
             "amount",
             "currency",
             "risk_score",
+            "rule_risk_score",
+            "fraud_probability",
             "decision",
             "triggered_rules",
+            "detector_version",
         ]
     ].copy()
     queue["triggered_rules"] = queue["triggered_rules"].apply(lambda rules: ", ".join(rules))
@@ -123,6 +126,11 @@ def render_dashboard() -> None:
             ),
             "amount": st.column_config.NumberColumn("Amount", format="%.2f"),
             "risk_score": st.column_config.ProgressColumn("Risk", min_value=0, max_value=100),
+            "rule_risk_score": st.column_config.NumberColumn("Rule score", format="%d"),
+            "fraud_probability": st.column_config.ProgressColumn(
+                "Model probability", min_value=0.0, max_value=1.0, format="percent"
+            ),
+            "detector_version": st.column_config.TextColumn("Detector"),
         },
     )
 

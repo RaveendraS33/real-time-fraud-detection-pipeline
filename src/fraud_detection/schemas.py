@@ -89,6 +89,7 @@ class FraudDecision(BaseModel):
     amount: float
     currency: Currency
     risk_score: int = Field(ge=0, le=100)
+    rule_risk_score: int = Field(default=0, ge=0, le=100)
     fraud_probability: float = Field(ge=0, le=1)
     decision: DecisionOutcome
     triggered_rules: list[str]
@@ -99,4 +100,3 @@ class FraudDecision(BaseModel):
 
     def kafka_key(self) -> str:
         return self.customer_id
-

@@ -34,8 +34,9 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 3 persists scored decisions in PostgreSQL with replay-safe upserts and presents live fraud
-metrics, decision volume, simulated recall, and an investigation queue in Streamlit.
+Phase 4 adds a reproducible logistic-regression training pipeline and a compact `logreg-v1`
+artifact. Online decisions combine model probability with the explainable rule score while
+preserving both values for audit.
 
 ## Local Setup
 
@@ -60,6 +61,14 @@ Generate a small mixed stream:
 ```powershell
 .\.venv\Scripts\python.exe scripts\simulate_transactions.py --count 25 --fraud-rate 0.12
 ```
+
+Reproduce the model artifact:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\train_model.py --samples 20000 --fraud-rate 0.08 --seed 42
+```
+
+See the [model card](docs/MODEL_CARD.md) for feature definitions, holdout metrics, and limitations.
 
 Check the infrastructure:
 
@@ -90,6 +99,6 @@ hard maximum of `$5` total AWS spend.
 - [x] Repository foundation, local infrastructure, cost policy, and CI
 - [x] Typed transaction API and fraud-aware simulator
 - [x] Event-time streaming features and explainable rules
-- [ ] Offline model training and versioned online scoring
+- [x] Offline model training and versioned online scoring
 - [x] PostgreSQL decision store and Streamlit dashboard
 - [ ] End-to-end tests, operational metrics, and runbook

@@ -1,1 +1,1 @@
--e .[dev,storage]
+-e .[dev,ml,storage]
