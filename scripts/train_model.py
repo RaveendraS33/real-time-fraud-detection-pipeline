@@ -51,6 +51,10 @@ def build_dataset(samples: int, fraud_rate: float, seed: int) -> tuple[np.ndarra
     return np.asarray(rows, dtype=float), np.asarray(labels, dtype=int)
 
 
+def _sigmoid(values: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-values))
+
+
 def train_and_export(
     samples: int,
     fraud_rate: float,
@@ -58,20 +62,33 @@ def train_and_export(
     output: Path,
 ) -> dict:
     features, labels = build_dataset(samples, fraud_rate, seed)
-    split_index = int(samples * 0.8)
-    train_x, test_x = features[:split_index], features[split_index:]
-    train_y, test_y = labels[:split_index], labels[split_index:]
+    train_end = int(samples * 0.7)
+    calibration_end = int(samples * 0.8)
+    train_x, calibration_x, test_x = (
+        features[:train_end],
+        features[train_end:calibration_end],
+        features[calibration_end:],
+    )
+    train_y, calibration_y, test_y = (
+        labels[:train_end],
+        labels[train_end:calibration_end],
+        labels[calibration_end:],
+    )
 
     scaler = StandardScaler()
-    scaled_train_x = scaler.fit_transform(train_x)
-    classifier = LogisticRegression(
-        class_weight="balanced",
-        max_iter=1_000,
-        random_state=seed,
-    )
-    classifier.fit(scaled_train_x, train_y)
+    classifier = LogisticRegression(class_weight="balanced", max_iter=1_000, random_state=seed)
+    classifier.fit(scaler.fit_transform(train_x), train_y)
 
-    probabilities = classifier.predict_proba(scaler.transform(test_x))[:, 1]
+    # Platt scaling fit on the held-out calibration split: map the raw decision logit
+    # through a calibration sigmoid so served probabilities are calibrated, not raw.
+    calibration_logits = classifier.decision_function(scaler.transform(calibration_x))
+    platt = LogisticRegression()
+    platt.fit(calibration_logits.reshape(-1, 1), calibration_y)
+    platt_a = float(platt.coef_[0][0])
+    platt_b = float(platt.intercept_[0])
+
+    test_logits = classifier.decision_function(scaler.transform(test_x))
+    probabilities = _sigmoid(platt_a * test_logits + platt_b)
     predictions = probabilities >= 0.5
     true_negative, false_positive, false_negative, true_positive = confusion_matrix(
         test_y, predictions, labels=[0, 1]
@@ -90,7 +107,7 @@ def train_and_export(
         },
     }
     artifact = {
-        "artifact_version": 1,
+        "artifact_version": 2,
         "model_version": "logreg-v1",
         "feature_names": list(FEATURE_NAMES),
         "scaler_mean": scaler.mean_.tolist(),
@@ -98,11 +115,12 @@ def train_and_export(
         "coefficients": classifier.coef_[0].tolist(),
         "intercept": float(classifier.intercept_[0]),
         "decision_threshold": 0.5,
+        "calibration": {"method": "platt", "a": platt_a, "b": platt_b},
         "training": {
             "samples": samples,
             "fraud_rate": fraud_rate,
             "seed": seed,
-            "split": "first 80% train, final 20% test",
+            "split": "first 70% train, next 10% calibration, final 20% test",
             "training_data_start": start_time_iso(),
             "metrics": metrics,
         },

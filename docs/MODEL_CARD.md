@@ -10,7 +10,7 @@ portfolio demonstration, not a model approved for financial decisions.
 
 - 20,000 deterministic synthetic transactions generated with seed `42`
 - 8% target fraud rate
-- First 80% used for training; final 20% held out for evaluation
+- First 70% for training, next 10% for probability calibration, final 20% held out for evaluation
 - Fraud scenarios: high amount, foreign device, and low-value card testing
 - Legitimate data includes occasional device replacements and high-value purchases to create
   overlap between classes
@@ -30,38 +30,43 @@ from the feature contract.
 
 | Metric | Value |
 | --- | ---: |
-| ROC AUC | 0.9902 |
-| Average precision | 0.8890 |
-| Precision at 0.5 | 0.6706 |
-| Recall at 0.5 | 1.0000 |
-| False positives | 168 |
-| False negatives | 0 |
+| ROC AUC | 0.9903 |
+| Average precision | 0.8898 |
+| Precision at 0.5 | 0.7896 |
+| Recall at 0.5 | 0.8450 |
+| False positives | 77 |
+| False negatives | 53 |
 
-The high recall is intentional for an alerting system, but the false-positive count demonstrates
-why human review and threshold tuning are necessary.
+Metrics are computed on the **calibrated** probabilities (see Calibration). Calibration trades some
+recall at the fixed 0.5 threshold for well-calibrated probabilities and higher precision; recall can
+be recovered by lowering the decision threshold, and the hybrid detector's deterministic rules add
+coverage independent of the model score.
 
 ## Calibration
 
-Reproduce with `scripts/evaluate_model.py`, which scores the committed artifact on the same holdout:
+The served probabilities are **Platt-scaled**: a calibration sigmoid (`a`, `b`, stored in the
+artifact's `calibration` field) is fit on the held-out 10% calibration split and applied to the raw
+model logit at scoring time. Reproduce with `scripts/evaluate_model.py`.
 
-| Metric | Value |
-| --- | ---: |
-| Brier score | 0.033 |
+| Metric | Before calibration | After (served) |
+| --- | ---: | ---: |
+| Brier score | 0.033 | 0.022 |
+| Top-bin predicted vs observed | 0.63 vs 0.43 (over-confident) | 0.42 vs 0.43 (calibrated) |
 
-Reliability (quantile bins, mean predicted probability -> observed fraud rate):
+Reliability after calibration (quantile bins, mean predicted -> observed fraud rate):
 
 | Predicted | Observed |
 | ---: | ---: |
+| 0.000 | 0.000 |
+| 0.000 | 0.000 |
 | 0.001 | 0.000 |
-| 0.002 | 0.000 |
-| 0.009 | 0.000 |
-| 0.028 | 0.000 |
-| 0.633 | 0.427 |
+| 0.003 | 0.000 |
+| 0.424 | 0.427 |
 
-The model is well-calibrated across the large low-risk majority but **over-confident in the
-highest-risk bin** (it predicts ~0.63 where the observed fraud rate is ~0.43). For a high-recall
-alerting system this conservative bias is acceptable, but probability calibration (isotonic or
-Platt scaling) would be needed before driving any automated, probability-threshold action.
+Platt scaling removed the high-end over-confidence (the top bin now matches the observed fraud rate)
+and improved the Brier score. The trade-off is lower recall at the fixed 0.5 threshold, since the
+calibrated probabilities are less extreme; tune the threshold or rely on the hybrid rules to recover
+coverage.
 
 ## Limitations
 

@@ -47,6 +47,9 @@ def predict_probability(artifact: dict, features: np.ndarray) -> np.ndarray:
     coefficients = np.asarray(artifact["coefficients"])
     standardized = (features - mean) / scale
     logits = artifact["intercept"] + standardized @ coefficients
+    calibration = artifact.get("calibration")
+    if calibration and calibration.get("method") == "platt":
+        logits = calibration["a"] * logits + calibration["b"]
     return 1.0 / (1.0 + np.exp(-logits))
 
 

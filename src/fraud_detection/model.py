@@ -37,6 +37,7 @@ class LogisticModelArtifact:
     coefficients: tuple[float, ...]
     intercept: float
     decision_threshold: float
+    calibration: dict | None = None
 
     @classmethod
     def load(cls, path: str | Path) -> "LogisticModelArtifact":
@@ -55,6 +56,7 @@ class LogisticModelArtifact:
             coefficients=tuple(payload["coefficients"]),
             intercept=payload["intercept"],
             decision_threshold=payload["decision_threshold"],
+            calibration=payload.get("calibration"),
         )
         artifact._validate_dimensions()
         return artifact
@@ -78,6 +80,9 @@ class LogisticModelArtifact:
                 strict=True,
             )
         )
+        if self.calibration and self.calibration.get("method") == "platt":
+            # Platt scaling: map the raw logit through a calibration sigmoid.
+            logit = self.calibration["a"] * logit + self.calibration["b"]
         if logit >= 0:
             return 1 / (1 + math.exp(-logit))
         exp_logit = math.exp(logit)

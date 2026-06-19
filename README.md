@@ -37,9 +37,9 @@ Measured on the synthetic holdout and the local stack (reproduce with the script
 | Dimension | Measured |
 | --- | --- |
 | Model ranking quality | ROC AUC **0.99**, average precision **0.89** |
-| Recall at the 0.5 threshold | **1.00** (0 false negatives on the holdout) |
-| Precision at the 0.5 threshold | **0.67** (false positives are expected and reviewed) |
-| Probability calibration | Brier score **0.033** (see the model card) |
+| Recall at the 0.5 threshold | **0.85** (threshold-tunable; the hybrid rules add coverage) |
+| Precision at the 0.5 threshold | **0.79** |
+| Probability calibration | Platt-scaled, Brier **0.022** (top bin 0.42 predicted vs 0.43 observed) |
 | Ingestion throughput | ~**300 transactions/s** accepted |
 | API latency | p50 **~50 ms**, p99 **~59 ms** |
 | Detector scoring latency | **~2.4 ms** avg, **~4.8 ms** p95 (Prometheus) |
@@ -216,3 +216,4 @@ hard maximum of `$5` total AWS spend.
 - [x] Fault tolerance and ops: alert retry/backoff + dead-letter capture and replay, Alertmanager
       routing, and failure-mode + schema-evolution tests
 - [x] Kafka consumer-lag exporter (`fraud_consumer_lag`) and a ConsumerLag alert
+- [x] Probability calibration (Platt scaling on a held-out split) to fix high-end over-confidence

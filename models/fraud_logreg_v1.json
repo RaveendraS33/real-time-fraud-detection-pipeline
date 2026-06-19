@@ -1,11 +1,16 @@
 {
-  "artifact_version": 1,
+  "artifact_version": 2,
+  "calibration": {
+    "a": 0.9662005522124963,
+    "b": -2.532993112225255,
+    "method": "platt"
+  },
   "coefficients": [
-    1.1348390962380295,
-    -0.16751798335826948,
-    2.3984656818356402,
-    -0.13583960214973168,
-    1.3283953716649834
+    1.1600642243034942,
+    -0.20692321874447628,
+    2.3662554254096904,
+    -0.14486174723483158,
+    1.3058696931868337
   ],
   "decision_threshold": 0.5,
   "feature_names": [
@@ -15,39 +20,39 @@
     "is_new_country",
     "is_risky_merchant"
   ],
-  "intercept": -4.104185941828906,
+  "intercept": -4.003484506486394,
   "model_version": "logreg-v1",
   "scaler_mean": [
-    4.463521361298627,
-    1.5870625,
-    0.123875,
-    0.03125,
-    0.5289375
+    4.460912837906365,
+    1.5856428571428571,
+    0.12471428571428571,
+    0.03571428571428571,
+    0.5288571428571428
   ],
   "scaler_scale": [
-    1.3081994865294029,
-    0.7536876813998031,
-    0.3294388932335884,
-    0.17399263633843817,
-    0.49916191871348725
+    1.3123470654165421,
+    0.7505861620992061,
+    0.3303946619621512,
+    0.1855768722395567,
+    0.4991665707017206
   ],
   "training": {
     "fraud_rate": 0.08,
     "metrics": {
-      "average_precision": 0.889,
+      "average_precision": 0.8898,
       "confusion_matrix": {
-        "false_negative": 0,
-        "false_positive": 168,
-        "true_negative": 3490,
-        "true_positive": 342
+        "false_negative": 53,
+        "false_positive": 77,
+        "true_negative": 3581,
+        "true_positive": 289
       },
-      "precision_at_0_5": 0.6706,
-      "recall_at_0_5": 1.0,
-      "roc_auc": 0.9902
+      "precision_at_0_5": 0.7896,
+      "recall_at_0_5": 0.845,
+      "roc_auc": 0.9903
     },
     "samples": 20000,
     "seed": 42,
-    "split": "first 80% train, final 20% test",
+    "split": "first 70% train, next 10% calibration, final 20% test",
     "training_data_start": "2026-01-01T00:00:00+00:00"
   }
 }

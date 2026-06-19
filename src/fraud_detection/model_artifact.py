@@ -67,4 +67,15 @@ def verify(committed: dict, candidate: dict) -> list[str]:
         if abs(committed_confusion[cell] - candidate_confusion[cell]) > CONFUSION_COUNT_TOL:
             errors.append(f"training.metrics.confusion_matrix.{cell} differs beyond tolerance")
 
+    committed_cal = committed.get("calibration")
+    candidate_cal = candidate.get("calibration")
+    if (committed_cal is None) != (candidate_cal is None):
+        errors.append("calibration presence differs")
+    elif committed_cal is not None:
+        if committed_cal.get("method") != candidate_cal.get("method"):
+            errors.append("calibration.method differs")
+        for key in ("a", "b"):
+            if not _param_close(committed_cal[key], candidate_cal[key]):
+                errors.append(f"calibration.{key} differs beyond tolerance")
+
     return errors
