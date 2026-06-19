@@ -166,6 +166,27 @@ services:
     networks:
       - fraud-network
 
+  lag-exporter:
+    build:
+      context: .
+      dockerfile: services/lag-exporter/Dockerfile
+    container_name: fraud-lag-exporter
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      METRICS_PORT: 9104
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9104/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - fraud-network
+
   dashboard:
     build:
       context: .

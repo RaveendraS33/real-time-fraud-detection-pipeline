@@ -18,8 +18,9 @@ controls matter as much as producing a prediction.
 - **Production-minded reliability:** manual-commit Kafka consumers, a dead-letter topic with replay
   tooling, an alert worker with retry/backoff and dead-letter capture, Prometheus alert rules routed
   to Alertmanager, and graceful shutdown.
-- **Observability:** Prometheus scrapes every service, and each worker's metrics endpoint doubles as
-  its Docker health check.
+- **Observability:** Prometheus scrapes every service (each worker's metrics endpoint doubles as its
+  Docker health check), a lag-exporter publishes Kafka consumer-group lag, and alert rules route to
+  Alertmanager.
 - **Tested and CI-gated:** unit tests plus a live Docker integration test
   (API -> Kafka -> detector -> PostgreSQL, with alert verification); CI runs ruff, pytest,
   model-artifact verification, and the integration job.
@@ -214,3 +215,4 @@ hard maximum of `$5` total AWS spend.
 - [x] Measured performance and calibration, Prometheus alert rules, and a security note
 - [x] Fault tolerance and ops: alert retry/backoff + dead-letter capture and replay, Alertmanager
       routing, and failure-mode + schema-evolution tests
+- [x] Kafka consumer-lag exporter (`fraud_consumer_lag`) and a ConsumerLag alert

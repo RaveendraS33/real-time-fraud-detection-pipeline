@@ -28,3 +28,7 @@ scrape_configs:
     static_configs:
       - targets: ["alerter:9103"]
 
+  - job_name: lag-exporter
+    static_configs:
+      - targets: ["lag-exporter:9104"]
+

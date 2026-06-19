@@ -14,7 +14,7 @@ Expected endpoints:
 | Transaction API | <http://localhost:8000/health> | `{"status":"healthy"}` |
 | API documentation | <http://localhost:8000/docs> | OpenAPI page loads |
 | Fraud dashboard | <http://localhost:8501> | Metrics and investigation queue render |
-| Prometheus | <http://localhost:9090/targets> | Four scrape targets are `UP` |
+| Prometheus | <http://localhost:9090/targets> | Five scrape targets are `UP` |
 
 Generate a short stream:
 
@@ -72,8 +72,10 @@ Prometheus loads alert rules from `monitoring/alerts.yml`; view them at
 - `ServiceDown` — a scrape target has been down for 1m.
 - `DetectorFailures` / `DecisionStoreFailures` — validation or delivery failures within 5m.
 - `AlertWebhookFailing` — fraud-alert webhook delivery is failing.
-- `PipelineStalled` — the detector scored nothing for 10m while the API kept ingesting (a stall /
-  consumer-lag proxy; per-partition Kafka lag would need a dedicated exporter).
+- `PipelineStalled` — the detector scored nothing for 10m while the API kept ingesting.
+- `ConsumerLag` — a consumer group's total lag exceeds 1000 for 5m. Per-partition lag is published
+  as `fraud_consumer_lag{group,topic,partition}` by the `lag-exporter` service (high watermark minus
+  committed offset), the real health signal for the Kafka consumers.
 
 Rules are routed to **Alertmanager** (<http://localhost:9093>), which groups and de-duplicates
 them. The demo ships an empty receiver (alerts are visible in the Alertmanager UI); configure a

@@ -45,3 +45,11 @@ groups:
           severity: critical
         annotations:
           summary: "No transactions scored in 10m while the API is still ingesting"
+
+      - alert: ConsumerLag
+        expr: sum by (group) (fraud_consumer_lag) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer group {{ $labels.group }} lag exceeds 1000 for 5m"
