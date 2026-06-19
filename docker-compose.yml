@@ -30,6 +30,22 @@ services:
     networks:
       - fraud-network
 
+  kafka-init:
+    image: apache/kafka:4.2.0
+    container_name: fraud-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions.raw --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions.scored --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic fraud.alerts --partitions 3 --replication-factor 1
+    networks:
+      - fraud-network
+
   postgres:
     image: postgres:17-alpine
     container_name: fraud-postgres
@@ -49,6 +65,29 @@ services:
     networks:
       - fraud-network
 
+  transaction-api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    container_name: fraud-transaction-api
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: development
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      TRANSACTIONS_TOPIC: transactions.raw
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - fraud-network
+
 networks:
   fraud-network:
     name: fraud-network
@@ -56,4 +95,3 @@ networks:
 volumes:
   kafka-data:
   postgres-data:
-

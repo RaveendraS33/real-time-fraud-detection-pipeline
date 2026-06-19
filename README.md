@@ -34,9 +34,9 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 0 establishes the local Kafka and PostgreSQL foundation, project configuration, cost
-policy, and continuous integration. Application services are added incrementally so each phase
-can be understood and verified independently.
+Phase 1 adds a versioned Pydantic transaction contract, a FastAPI ingestion service with one
+long-lived idempotent Kafka producer, explicit Kafka topics, and a deterministic fraud-aware
+transaction simulator.
 
 ## Local Setup
 
@@ -49,6 +49,15 @@ python -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 docker compose up -d
+```
+
+Open the API documentation at <http://localhost:8000/docs>, or inspect a valid event at
+<http://localhost:8000/transactions/sample>.
+
+Generate a small mixed stream:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\simulate_transactions.py --count 25 --fraud-rate 0.12
 ```
 
 Check the infrastructure:
@@ -78,9 +87,8 @@ hard maximum of `$5` total AWS spend.
 ## Roadmap
 
 - [x] Repository foundation, local infrastructure, cost policy, and CI
-- [ ] Typed transaction API and fraud-aware simulator
+- [x] Typed transaction API and fraud-aware simulator
 - [ ] Event-time streaming features and explainable rules
 - [ ] Offline model training and versioned online scoring
 - [ ] PostgreSQL decision store and Streamlit dashboard
 - [ ] End-to-end tests, operational metrics, and runbook
-
