@@ -5,9 +5,11 @@ import signal
 from threading import Event
 
 from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
+from prometheus_client import start_http_server
 from pydantic import ValidationError
 
 from fraud_detection.config import Settings, get_settings
+from fraud_detection.metrics import STORE_DECISIONS, STORE_FAILURES
 from fraud_detection.schemas import FraudDecision
 from fraud_detection.storage import DecisionRepository
 
@@ -42,6 +44,7 @@ class DecisionStoreWorker:
 
     def run(self) -> None:
         self._repository.ensure_schema()
+        start_http_server(self._settings.metrics_port)
         self._consumer.subscribe([self._settings.fraud_decisions_topic])
         logger.info("Decision store consuming %s", self._settings.fraud_decisions_topic)
 
@@ -69,12 +72,14 @@ class DecisionStoreWorker:
         try:
             decision = FraudDecision.model_validate_json(message.value())
             self._repository.upsert(decision)
+            STORE_DECISIONS.labels(decision=decision.decision.value).inc()
             logger.info(
                 "decision_stored transaction_id=%s decision=%s",
                 decision.transaction_id,
                 decision.decision,
             )
         except ValidationError as exc:
+            STORE_FAILURES.labels(stage="validation").inc()
             logger.warning("Invalid decision sent to dead letter topic: %s", exc)
             self._producer.produce(
                 self._settings.dead_letter_topic,

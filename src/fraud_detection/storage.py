@@ -33,8 +33,7 @@ INDEX_STATEMENTS = (
     "ON fraud_decisions (event_time DESC)",
     "CREATE INDEX IF NOT EXISTS idx_fraud_decisions_outcome "
     "ON fraud_decisions (decision, event_time DESC)",
-    "CREATE INDEX IF NOT EXISTS idx_fraud_decisions_risk "
-    "ON fraud_decisions (risk_score DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_fraud_decisions_risk ON fraud_decisions (risk_score DESC)",
 )
 
 MIGRATION_STATEMENTS = (

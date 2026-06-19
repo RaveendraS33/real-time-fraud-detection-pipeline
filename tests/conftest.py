@@ -21,4 +21,3 @@ def valid_transaction_data() -> dict:
         "channel": "ecommerce",
         "event_time": datetime.now(UTC),
     }
-

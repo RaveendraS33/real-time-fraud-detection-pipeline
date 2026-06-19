@@ -32,4 +32,3 @@ def test_exported_model_scores_suspicious_features_higher() -> None:
     assert 0 <= suspicious_probability <= 1
     assert suspicious_probability > ordinary_probability
     assert model.model_version == "logreg-v1"
-

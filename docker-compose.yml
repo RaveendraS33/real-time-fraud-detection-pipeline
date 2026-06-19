@@ -104,6 +104,13 @@ services:
       FRAUD_DECISIONS_TOPIC: transactions.scored
       FRAUD_ALERTS_TOPIC: fraud.alerts
       DEAD_LETTER_TOPIC: transactions.dead_letter
+      METRICS_PORT: 9101
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9101/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
     networks:
       - fraud-network
@@ -123,6 +130,13 @@ services:
       FRAUD_DECISIONS_TOPIC: transactions.scored
       DEAD_LETTER_TOPIC: transactions.dead_letter
       DATABASE_URL: postgresql://fraud_app:fraud_dev_password@postgres:5432/fraud_detection
+      METRICS_PORT: 9102
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9102/metrics')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
     networks:
       - fraud-network
@@ -150,6 +164,32 @@ services:
     networks:
       - fraud-network
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: fraud-prometheus
+    depends_on:
+      detector:
+        condition: service_healthy
+      decision-store:
+        condition: service_healthy
+      transaction-api:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fraud-network
+
 networks:
   fraud-network:
     name: fraud-network
@@ -157,3 +197,4 @@ networks:
 volumes:
   kafka-data:
   postgres-data:
+  prometheus-data:

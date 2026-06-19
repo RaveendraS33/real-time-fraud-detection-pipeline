@@ -28,9 +28,7 @@ def main() -> None:
             response = client.post("/transactions", json=transaction.model_dump(mode="json"))
             response.raise_for_status()
             label = (
-                "fraud"
-                if transaction.simulation and transaction.simulation.is_fraud
-                else "normal"
+                "fraud" if transaction.simulation and transaction.simulation.is_fraud else "normal"
             )
             print(f"{number}/{args.count}: {transaction.transaction_id} ({label})")
             time.sleep(args.delay)

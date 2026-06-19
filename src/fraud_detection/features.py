@@ -42,7 +42,5 @@ class StreamingFeatureStore:
             transaction_count_5m=len(state.event_times),
             is_new_device=is_new_device,
             is_new_country=is_new_country,
-            is_risky_merchant=transaction.merchant_category
-            in {"digital_goods", "electronics"},
+            is_risky_merchant=transaction.merchant_category in {"digital_goods", "electronics"},
         )
-

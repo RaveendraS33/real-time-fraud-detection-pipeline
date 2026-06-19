@@ -95,4 +95,3 @@ class LogisticModelArtifact:
             raise ValueError(f"Invalid model artifact dimensions: {invalid}")
         if any(scale <= 0 for scale in self.scaler_scale):
             raise ValueError("Model scaler values must be positive")
-

@@ -10,9 +10,7 @@ def transaction(valid_transaction_data: dict, **overrides) -> TransactionEvent:
 
 
 def test_normal_transaction_is_approved(valid_transaction_data: dict) -> None:
-    decision = FraudScorer(Settings(_env_file=None)).score(
-        transaction(valid_transaction_data)
-    )
+    decision = FraudScorer(Settings(_env_file=None)).score(transaction(valid_transaction_data))
 
     assert decision.decision is DecisionOutcome.APPROVE
     assert decision.risk_score == 0

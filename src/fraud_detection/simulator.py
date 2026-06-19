@@ -35,9 +35,7 @@ class TransactionSimulator:
         scenario = None
 
         if is_fraud:
-            scenario = self._random.choice(
-                ("high_amount", "foreign_device", "card_testing")
-            )
+            scenario = self._random.choice(("high_amount", "foreign_device", "card_testing"))
             if scenario == "high_amount":
                 amount = round(self._random.uniform(1_000, 8_000), 2)
                 category = "electronics"

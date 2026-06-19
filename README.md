@@ -16,9 +16,12 @@ flowchart LR
     K1 --> DET["Feature and scoring service"]
     DET --> K2["Kafka transactions.scored"]
     DET --> K3["Kafka fraud.alerts"]
-    K2 --> DB["PostgreSQL"]
-    K3 --> DB
+    K2 --> STORE["Decision store"]
+    STORE --> DB["PostgreSQL"]
     DB --> UI["Streamlit dashboard"]
+    API -. metrics .-> PROM["Prometheus"]
+    DET -. metrics .-> PROM
+    STORE -. metrics .-> PROM
 ```
 
 See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
@@ -34,9 +37,8 @@ See [the architecture notes](docs/ARCHITECTURE.md) for design decisions.
 
 ## Current Phase
 
-Phase 4 adds a reproducible logistic-regression training pipeline and a compact `logreg-v1`
-artifact. Online decisions combine model probability with the explainable rule score while
-preserving both values for audit.
+Phase 5 adds Prometheus service metrics and worker health checks, a live Docker integration test,
+model-artifact verification in CI, and an operations runbook.
 
 ## Local Setup
 
@@ -69,6 +71,7 @@ Reproduce the model artifact:
 ```
 
 See the [model card](docs/MODEL_CARD.md) for feature definitions, holdout metrics, and limitations.
+Operational checks and recovery commands are documented in the [runbook](docs/RUNBOOK.md).
 
 Check the infrastructure:
 
@@ -76,6 +79,7 @@ Check the infrastructure:
 docker compose ps
 docker compose config --quiet
 ruff check .
+ruff format --check .
 pytest
 ```
 
@@ -101,4 +105,4 @@ hard maximum of `$5` total AWS spend.
 - [x] Event-time streaming features and explainable rules
 - [x] Offline model training and versioned online scoring
 - [x] PostgreSQL decision store and Streamlit dashboard
-- [ ] End-to-end tests, operational metrics, and runbook
+- [x] End-to-end tests, operational metrics, and runbook

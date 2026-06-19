@@ -3,11 +3,19 @@
 import logging
 import signal
 from threading import Event
+from time import perf_counter
 
 from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
+from prometheus_client import start_http_server
 from pydantic import ValidationError
 
 from fraud_detection.config import Settings, get_settings
+from fraud_detection.metrics import (
+    DETECTOR_DURATION,
+    DETECTOR_FAILURES,
+    DETECTOR_TRANSACTIONS,
+    MODEL_PROBABILITY,
+)
 from fraud_detection.schemas import DecisionOutcome, FraudDecision, TransactionEvent
 from fraud_detection.scoring import FraudScorer
 
@@ -41,6 +49,7 @@ class DetectionWorker:
         self._stop = Event()
 
     def run(self) -> None:
+        start_http_server(self._settings.metrics_port)
         self._consumer.subscribe([self._settings.transactions_topic])
         logger.info("Detector consuming %s", self._settings.transactions_topic)
 
@@ -65,11 +74,15 @@ class DetectionWorker:
         self._consumer.close()
 
     def _process(self, message) -> None:
+        started_at = perf_counter()
         try:
             transaction = TransactionEvent.model_validate_json(message.value())
             decision = self._scorer.score(transaction)
             self._publish_decision(decision)
+            DETECTOR_TRANSACTIONS.labels(decision=decision.decision.value).inc()
+            MODEL_PROBABILITY.observe(decision.fraud_probability)
         except (ValidationError, ValueError) as exc:
+            DETECTOR_FAILURES.labels(stage="validation").inc()
             logger.warning("Invalid transaction sent to dead letter topic: %s", exc)
             self._producer.produce(
                 self._settings.dead_letter_topic,
@@ -80,8 +93,10 @@ class DetectionWorker:
 
         remaining = self._producer.flush(10)
         if remaining:
+            DETECTOR_FAILURES.labels(stage="delivery").inc()
             raise RuntimeError(f"Kafka did not deliver {remaining} detector outputs")
         self._consumer.commit(message=message, asynchronous=False)
+        DETECTOR_DURATION.observe(perf_counter() - started_at)
 
     def _publish_decision(self, decision: FraudDecision) -> None:
         payload = decision.model_dump_json().encode()
@@ -109,4 +124,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

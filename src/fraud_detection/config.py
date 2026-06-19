@@ -27,9 +27,8 @@ class Settings(BaseSettings):
     review_score_threshold: int = 40
     decline_score_threshold: int = 70
     model_path: str = "models/fraud_logreg_v1.json"
-    database_url: str = (
-        "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
-    )
+    metrics_port: int = 9_101
+    database_url: str = "postgresql://fraud_app:fraud_dev_password@localhost:5432/fraud_detection"
 
 
 @lru_cache

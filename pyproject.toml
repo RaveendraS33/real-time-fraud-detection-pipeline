@@ -11,6 +11,7 @@ dependencies = [
   "confluent-kafka>=2.6,<3",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
+  "prometheus-client>=0.21,<1",
   "pydantic>=2.10,<3",
   "pydantic-settings>=2.7,<3",
   "uvicorn[standard]>=0.34,<1",
@@ -30,6 +31,7 @@ dashboard = [
   "streamlit>=1.42,<2",
 ]
 dev = [
+  "httpx2>=2,<3",
   "pytest>=8.3,<9",
   "pytest-cov>=6,<7",
   "ruff>=0.9,<1",
@@ -42,6 +44,9 @@ where = ["src"]
 addopts = "-q"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "integration: requires the live Docker Compose stack",
+]
 
 [tool.ruff]
 line-length = 100

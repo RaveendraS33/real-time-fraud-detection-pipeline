@@ -16,4 +16,3 @@ def test_settings_can_be_overridden(monkeypatch) -> None:
     settings = Settings(_env_file=None)
 
     assert settings.transactions_topic == "test.transactions"
-

@@ -66,8 +66,11 @@ def render_dashboard() -> None:
     metric_columns[3].metric("Simulated recall", f"{recall:.1f}%")
 
     chart_columns = st.columns((1, 2))
-    decision_counts = decisions["decision"].value_counts().rename_axis("decision").reset_index(
-        name="transactions"
+    decision_counts = (
+        decisions["decision"]
+        .value_counts()
+        .rename_axis("decision")
+        .reset_index(name="transactions")
     )
     mix_chart = px.bar(
         decision_counts,

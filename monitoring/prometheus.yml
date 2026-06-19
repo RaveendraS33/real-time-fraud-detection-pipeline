@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: transaction-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["transaction-api:8000"]
+
+  - job_name: detector
+    static_configs:
+      - targets: ["detector:9101"]
+
+  - job_name: decision-store
+    static_configs:
+      - targets: ["decision-store:9102"]
+

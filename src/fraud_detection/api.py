@@ -6,9 +6,12 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from fraud_detection.config import Settings, get_settings
 from fraud_detection.messaging import KafkaTransactionPublisher, TransactionPublisher
+from fraud_detection.metrics import API_TRANSACTIONS
 from fraud_detection.schemas import AcceptedTransaction, TransactionEvent
 
 PublisherFactory = Callable[[Settings], TransactionPublisher]
@@ -37,6 +40,10 @@ def create_app(
     @application.get("/health")
     def health() -> dict[str, str]:
         return {"status": "healthy"}
+
+    @application.get("/metrics", include_in_schema=False)
+    def metrics() -> Response:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     @application.get("/transactions/sample", response_model=TransactionEvent)
     def sample_transaction() -> TransactionEvent:
@@ -69,12 +76,14 @@ def create_app(
         try:
             request.app.state.publisher.publish(transaction)
         except RuntimeError as exc:
+            API_TRANSACTIONS.labels(outcome="rejected").inc()
             logger.exception("Transaction publish failed")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Transaction stream is temporarily unavailable",
             ) from exc
 
+        API_TRANSACTIONS.labels(outcome="accepted").inc()
         return AcceptedTransaction(
             transaction_id=transaction.transaction_id,
             accepted_at=datetime.now(UTC),
@@ -84,4 +93,3 @@ def create_app(
 
 
 app = create_app()
-

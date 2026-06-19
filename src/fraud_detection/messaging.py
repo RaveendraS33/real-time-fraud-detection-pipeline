@@ -61,4 +61,3 @@ class KafkaTransactionPublisher:
                 message.partition(),
                 message.offset(),
             )
-

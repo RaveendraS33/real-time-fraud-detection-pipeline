@@ -50,3 +50,17 @@ def test_sample_transaction_matches_contract() -> None:
     assert response.status_code == 200
     assert response.json()["schema_version"] == "1.0"
     assert datetime.fromisoformat(response.json()["event_time"]).tzinfo is not None
+
+
+def test_metrics_endpoint_exposes_prometheus_data() -> None:
+    publisher = FakePublisher()
+    app = create_app(
+        Settings(_env_file=None),
+        publisher_factory=lambda settings: publisher,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "fraud_api_transactions_total" in response.text
